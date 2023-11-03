@@ -44,6 +44,14 @@ void location::setCountry(std::string tempCountry) {
     countryName = tempCountry;
 }
 
+location* location::getLocations(){
+    return locations.data();
+}
+
+void location::addElementToLocations(location tempLocation) {
+    locations.push_back(tempLocation);
+}
+
 std::string location::askForInput(std::string name) {
     std::string input;
     std::cout << "Type in " << name << " name: ";
@@ -92,7 +100,7 @@ size_t location::WriteCallback(void* contents, size_t size, size_t nmemb, std::s
     return totalSize;
 }
 
-void location::getLocationChoice(json jsonResponse) {
+location location::getLocationChoice(json jsonResponse) {
     std::vector<std::string> cities;
     std::vector<std::string> countries;
 
@@ -103,11 +111,9 @@ void location::getLocationChoice(json jsonResponse) {
         countries.push_back(tempCountry);
     }
 
-//    json temp2 = temp[3]["properties"]["city"];
-
     // Format and print the output
     std::cout << "The options for your search are: " << std::endl;
-//    std::cout << std::setw(4) << jsonResponse << std::endl;
+
     for (int i = 0; i < cities.size(); i++){
         std::cout << i+1 <<". City: " << cities[i] << ", Country: " << countries[i] << std::endl;
     }
@@ -120,8 +126,88 @@ void location::getLocationChoice(json jsonResponse) {
     json city = jsonResponse["features"][x-1]["properties"]["city"];
     json country = jsonResponse["features"][x-1]["properties"]["country"];
 
-    setLongitude(longitude);
-    setLatitude(latitude);
-    setCity(city);
-    setCountry(country);
+    location temp;
+    temp.setLongitude(longitude);
+    temp.setLatitude(latitude);
+    temp.setCity(city);
+    temp.setCountry(country);
+
+    return temp;
+}
+
+void location::saveLocation() {
+    std::string city = askForInput("city");
+    std::string country = askForInput("country");
+
+    location choice = getLocationChoice(makeApiCall(city, country));
+    addElementToLocations(choice);
+}
+
+void location::writeToFile() {
+    std::fstream LocationFile;
+    std::fstream tempFile;
+
+    LocationFile.open("locations.txt", std::ios::app);
+    tempFile.open("locations.txt");
+    int count = 0;
+
+    if (LocationFile.is_open() && tempFile.is_open()){
+        std::string temp;
+        while(std::getline(tempFile, temp)){
+            count ++;
+        }
+        for (int i = 0; i < locations.size(); i++){
+            LocationFile << count + 1 << "," << locations[i].getCity() << "," << locations[i].getCountry() <<
+                            "," << locations[i].getLongitude() << "," << locations[i].getLatitude() << std::endl;
+        }
+    }
+
+    LocationFile.close();
+    tempFile.close();
+
+    std::cout << "Your location has been saved" << std::endl;
+}
+
+void location::readFileAndDisplay() {
+    std::fstream LocationFile;
+
+    LocationFile.open("locations.txt");
+    std::string line,tempWord, tempCity, tempCountry;
+    int tempId;
+    double tempLat, tempLon;
+    std::cout << "Your location data is as follows: " << std::endl;
+
+    if (LocationFile.is_open()){
+        while(std::getline(LocationFile, line)){
+            std::stringstream locationString(line);
+            int counter = 0;
+
+            while (std::getline(locationString>>std::ws, tempWord, ',')) {
+                if (counter == 0) {
+                    tempId = stoi(tempWord);
+                }
+                else if (counter == 1){
+                    tempCity = tempWord;
+                }
+                else if (counter == 2){
+                    tempCountry = tempWord;
+                }
+                else if (counter == 3) {
+                    tempLon = std::stod(tempWord);
+                }
+                else if (counter == 4) {
+                    tempLat = std::stod(tempWord);
+                }
+                counter++;
+
+            }
+
+            std::cout << "ID: " << tempId << ", City Name: " << tempCity << ", Country Name: " << tempCountry
+                        << "\n Longitude: " << tempLon << ", Latitude: " << tempLat << std::endl;
+
+        }
+    }
+
+    LocationFile.close();
+
 }

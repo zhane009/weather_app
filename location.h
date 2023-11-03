@@ -5,9 +5,10 @@
 #ifndef WEATHER_APP_LOCATION_H
 #define WEATHER_APP_LOCATION_H
 
-#include "iostream"
+#include <iostream>
 #include "json.hpp"
 #include "curl/curl.h"
+#include <fstream>
 using json = nlohmann::json;
 
 class location {
@@ -17,6 +18,7 @@ private:
     float latitude;
     std::string cityName;
     std::string countryName;
+    std::vector<location> locations;
 
 public:
     int getId();
@@ -29,10 +31,16 @@ public:
     void setCity(std::string);
     std::string getCountry();
     void setCountry(std::string);
+    location* getLocations();
+    void addElementToLocations(location);
+
     std::string askForInput(std::string);
     json makeApiCall(std::string, std::string);
     static size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* output);
-    void getLocationChoice(json);
+    location getLocationChoice(json);
+    void saveLocation();
+    void writeToFile();
+    void readFileAndDisplay();
 
 
 };
