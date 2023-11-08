@@ -4,6 +4,23 @@
 
 #include "location.h"
 
+location::location() {}
+
+location::location(std::string tempCity, std::string tempCountry, float tempLat, float tempLon) {
+    cityName = tempCity;
+    countryName = tempCountry;
+    latitude = tempLat;
+    longitude = tempLon;
+}
+
+location::location(int tempId, std::string tempCity, std::string tempCountry, float tempLat, float tempLon) {
+    id = tempId;
+    cityName = tempCity;
+    countryName = tempCountry;
+    latitude = tempLat;
+    longitude = tempLon;
+}
+
 int location::getId() {
     return id;
 }
@@ -126,11 +143,7 @@ location location::getLocationChoice(json jsonResponse) {
     json city = jsonResponse["features"][x-1]["properties"]["city"];
     json country = jsonResponse["features"][x-1]["properties"]["country"];
 
-    location temp;
-    temp.setLongitude(longitude);
-    temp.setLatitude(latitude);
-    temp.setCity(city);
-    temp.setCountry(country);
+    location temp(city, country, latitude, longitude);
 
     return temp;
 }
@@ -168,7 +181,8 @@ void location::writeToFile() {
     std::cout << "Your location has been saved" << std::endl;
 }
 
-void location::readFileAndDisplay() {
+void location::readFile() {
+    locations.clear();
     std::fstream LocationFile;
 
     LocationFile.open("locations.txt");
@@ -202,12 +216,60 @@ void location::readFileAndDisplay() {
 
             }
 
-            std::cout << "ID: " << tempId << ", City Name: " << tempCity << ", Country Name: " << tempCountry
-                        << "\n Longitude: " << tempLon << ", Latitude: " << tempLat << std::endl;
-
+            location temp(tempId, tempCity, tempCountry, tempLat, tempLon);
+            addElementToLocations(temp);
         }
     }
 
     LocationFile.close();
+}
 
+void location::displayLocations() {
+    readFile();
+    location* temp = getLocations();
+    for (int i = 0; i < locations.size(); i++){
+        std::cout << "ID: " << temp[i].getId() << ", City Name: " << temp[i].getCity() << ", Country Name: " << temp[i].getCountry()
+                  << "\n Longitude: " << temp[i].getLongitude() << ", Latitude: " << temp[i].getLatitude() << std::endl;
+    }
+}
+
+void location::removeLocation() {
+    displayLocations();
+    std::ofstream LocationFile;
+    LocationFile.open("locations.txt");
+
+    std::cout << "\nWhich location ID do you want to remove?: ";
+    int choice;
+    std::cin >> choice;
+    auto it = locations.begin();
+
+    for(int i = 0; i < locations.size(); i++) {
+        if (it->getId() == choice){
+            locations.erase(it);
+        }
+        it++;
+    }
+
+    it = locations.begin();
+    for (int i = 0; i < locations.size(); i++) {
+        it->setId(i + 1);
+        it++;
+    }
+
+
+
+    location* temp = getLocations();
+
+    if (LocationFile.is_open()){
+        for (int i = 0; i < locations.size(); i++){
+            LocationFile << temp[i].getId() << "," << temp[i].getCity() << "," << temp[i].getCountry() <<
+                         "," << temp[i].getLongitude() << "," << temp[i].getLatitude() << std::endl;
+
+        }
+    }
+    else {
+        std::cout << "error" << std::endl;
+    }
+
+    LocationFile.close();
 }

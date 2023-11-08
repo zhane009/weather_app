@@ -21,6 +21,9 @@ private:
     std::vector<location> locations;
 
 public:
+    location();
+    location(std::string, std::string, float, float);
+    location(int, std::string, std::string, float, float);
     int getId();
     void setId(int);
     float getLongitude();
@@ -40,8 +43,9 @@ public:
     location getLocationChoice(json);
     void saveLocation();
     void writeToFile();
-    void readFileAndDisplay();
-
+    void readFile();
+    void displayLocations();
+    void removeLocation();
 
 };
 

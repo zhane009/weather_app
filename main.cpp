@@ -10,7 +10,8 @@ int main() {
     location location;
     location.saveLocation();
     location.writeToFile();
-    location.readFileAndDisplay();
+    location.removeLocation();
+    location.displayLocations();
 
     return 0;
 }
