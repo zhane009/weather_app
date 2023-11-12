@@ -70,11 +70,21 @@ void location::addElementToLocations(location tempLocation) {
 }
 
 std::string location::askForInput(std::string name) {
-    std::string input;
-    std::cout << "Type in " << name << " name: ";
-    getline(std::cin, input);
-    input.erase(remove(input.begin(), input.end(), ' '), input.end());
-    return input;
+    std::string input, temp;
+    try{
+        std::cout << "Type in " << name << " name: ";
+        getline(std::cin, input);
+        for(char i : input) {
+            if(i != ' ')
+                temp += i;
+            else
+                temp += "%20";
+        }
+    }
+    catch (std::exception e){
+        std::cout << e.what() << std::endl;
+    }
+    return temp;
 }
 
 json location::makeApiCall(std::string userCity, std::string userCountry) {
@@ -82,32 +92,38 @@ json location::makeApiCall(std::string userCity, std::string userCountry) {
         CURLcode res;
         std::string response;
 
-        curl_global_init(CURL_GLOBAL_DEFAULT);
-        curl = curl_easy_init();
+        try{
+            curl_global_init(CURL_GLOBAL_DEFAULT);
+            curl = curl_easy_init();
 
 
-        if (curl) {
-            std::string url = "https://api.geoapify.com/v1/geocode/search?text=" + userCity + "&country=" + userCountry + "&limit=10&type=city&apiKey=c91e6371439d4849929c6215aed2b2f6";
+            if (curl) {
+                std::string url = "https://api.geoapify.com/v1/geocode/search?text=" + userCity + "&country=" + userCountry + "&limit=10&type=city&apiKey=c91e6371439d4849929c6215aed2b2f6";
 
-            curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+                curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
 
-            res = curl_easy_perform(curl);
+                res = curl_easy_perform(curl);
 
-            if (res != CURLE_OK) {
-                fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+                if (res != CURLE_OK) {
+                    fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+                }
+
+                curl_easy_cleanup(curl);
             }
 
-            curl_easy_cleanup(curl);
+            curl_global_cleanup();
+
+            // Parse JSON response
+            json jsonResponse = json::parse(response);
+            return jsonResponse;
         }
 
-        curl_global_cleanup();
-
-        // Parse JSON response
-        json jsonResponse = json::parse(response);
-        return jsonResponse;
+        catch (std::exception e) {
+            std::cout << e.what() << std::endl;
+        }
 }
 
 
@@ -149,6 +165,8 @@ location location::getLocationChoice(json jsonResponse) {
 }
 
 void location::saveLocation() {
+    std::cin.clear();
+    std::cin.ignore(10000, '\n');
     std::string city = askForInput("city");
     std::string country = askForInput("country");
 
@@ -160,32 +178,45 @@ void location::writeToFile() {
     std::fstream LocationFile;
     std::fstream tempFile;
 
-    LocationFile.open("locations.txt", std::ios::app);
-    tempFile.open("locations.txt");
-    int count = 0;
+    try{
+        LocationFile.open("locations.txt", std::ios::app);
+        tempFile.open("locations.txt");
+        int count = 0;
 
-    if (LocationFile.is_open() && tempFile.is_open()){
-        std::string temp;
-        while(std::getline(tempFile, temp)){
-            count ++;
+        if (LocationFile.is_open() && tempFile.is_open()){
+            std::string temp;
+            while(std::getline(tempFile, temp)){
+                count ++;
+            }
+            for (int i = 0; i < locations.size(); i++){
+                LocationFile << count + 1 << "," << locations[i].getCity() << "," << locations[i].getCountry() <<
+                             "," << locations[i].getLongitude() << "," << locations[i].getLatitude() << std::endl;
+            }
         }
-        for (int i = 0; i < locations.size(); i++){
-            LocationFile << count + 1 << "," << locations[i].getCity() << "," << locations[i].getCountry() <<
-                            "," << locations[i].getLongitude() << "," << locations[i].getLatitude() << std::endl;
-        }
+
+        LocationFile.close();
+        tempFile.close();
+
+        std::cout << "Your location has been saved" << std::endl;
     }
 
-    LocationFile.close();
-    tempFile.close();
+    catch(std::exception e){
+        std::cout << e.what() << std::endl;
+    }
 
-    std::cout << "Your location has been saved" << std::endl;
+
 }
 
 void location::readFile() {
     locations.clear();
     std::fstream LocationFile;
 
-    LocationFile.open("locations.txt");
+    try {
+        LocationFile.open("locations.txt");
+    }
+    catch (std::exception e){
+        std::cout << e.what() << std::endl;
+    }
     std::string line,tempWord, tempCity, tempCountry;
     int tempId;
     double tempLat, tempLon;
@@ -237,10 +268,26 @@ void location::removeLocation() {
     displayLocations();
     std::ofstream LocationFile;
     LocationFile.open("locations.txt");
-
-    std::cout << "\nWhich location ID do you want to remove?: ";
+    bool loop = true;
     int choice;
-    std::cin >> choice;
+
+    do {
+        try {
+            std::cout << "\nWhich location ID do you want to remove?: ";
+
+            std::cin >> choice;
+            if (choice > locations.size() || choice < 1) {
+                throw std::runtime_error("Invalid input");
+            }
+            loop = false;
+        }
+        catch (std::exception e) {
+            std::cout << "Invalid input, Please try again." << std::endl;
+            std::cin.clear();
+            std::cin.ignore(10000, '\n');
+        }
+    } while (loop);
+
     auto it = locations.begin();
 
     for(int i = 0; i < locations.size(); i++) {
@@ -256,8 +303,6 @@ void location::removeLocation() {
         it++;
     }
 
-
-
     location* temp = getLocations();
 
     if (LocationFile.is_open()){
@@ -266,6 +311,7 @@ void location::removeLocation() {
                          "," << temp[i].getLongitude() << "," << temp[i].getLatitude() << std::endl;
 
         }
+        std::cout << "Your location has been removed" << std::endl;
     }
     else {
         std::cout << "error" << std::endl;
