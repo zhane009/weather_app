@@ -152,7 +152,15 @@ location location::getLocationChoice(json jsonResponse) {
     }
     std::cout << "choose your city from the above list: ";
     int x;
-    std::cin >> x;
+    try{
+        std::cin >> x;
+        if (x < 1 || x > cities.size()){
+            throw std::exception();
+        }
+    }
+    catch (std::exception e){
+        std::cout << "Invalid input, Please try again" << std::endl;
+    }
 
     json longitude = jsonResponse["features"][x-1]["properties"]["lon"];
     json latitude = jsonResponse["features"][x-1]["properties"]["lat"];
